@@ -177,7 +177,6 @@ var FeatureSets = map[FeatureSet]*FeatureGateEnabledDisabled{
 		with(sigstoreImageVerification).
 		with(gcpLabelsTags).
 		with(gcpClusterHostedDNS).
-		with(vSphereStaticIPs).
 		with(routeExternalCertificate).
 		with(automatedEtcdBackup).
 		without(machineAPIOperatorDisableMachineHealthCheckController).
@@ -215,6 +214,7 @@ var defaultFeatures = &FeatureGateEnabledDisabled{
 		buildCSIVolumes,
 		kmsv1,
 		vSphereControlPlaneMachineset,
+		vSphereStaticIPs,
 	},
 	Disabled: []FeatureGateDescription{
 		disableKubeletCloudCredentialProviders, // We do not currently ship the correct config to use the external credentials provider.
