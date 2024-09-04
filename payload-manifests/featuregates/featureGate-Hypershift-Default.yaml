@@ -152,6 +152,9 @@
                         "name": "UserNamespacesSupport"
                     },
                     {
+                        "name": "VSphereMultiDisk"
+                    },
+                    {
                         "name": "VSphereMultiNetworks"
                     },
                     {
