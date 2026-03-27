@@ -6,7 +6,7 @@ metadata:
     api.openshift.io/filename-cvo-runlevel: "0000_80"
     api.openshift.io/filename-operator: machine-config
     api.openshift.io/filename-ordering: "01"
-    feature-gate.release.openshift.io/GCPClusterHostedDNSInstall: "true"
+    feature-gate.release.openshift.io/VSphereMultiVCenterDay2: "true"
   labels:
     openshift.io/operator-managed: ""
   name: controllerconfigs.machineconfiguration.openshift.io
@@ -128,7 +128,11 @@ spec:
                                   privateZoneIAMRole contains the ARN of an IAM role that should be assumed when performing
                                   operations on the cluster's private hosted zone specified in the cluster DNS config.
                                   When left empty, no role should be assumed.
-                                pattern: ^arn:(aws|aws-cn|aws-us-gov):iam::[0-9]{12}:role\/.*$
+
+                                  The ARN must follow the format: arn:<partition>:iam::<account-id>:role/<role-name>, where:
+                                  <partition> is the AWS partition (aws, aws-cn, aws-us-gov, or aws-eusc),
+                                  <account-id> is a 12-digit numeric identifier for the AWS account,
+                                  <role-name> is the IAM role name.
                                 type: string
                             type: object
                           type:
@@ -847,9 +851,10 @@ spec:
                               balancers, dynamic volume provisioning, machine creation and deletion, and
                               other integrations are enabled. If None, no infrastructure automation is
                               enabled. Allowed values are "AWS", "Azure", "BareMetal", "GCP", "Libvirt",
-                              "OpenStack", "VSphere", "oVirt", "KubeVirt", "EquinixMetal", "PowerVS",
-                              "AlibabaCloud", "Nutanix" and "None". Individual components may not support all platforms,
-                              and must handle unrecognized platforms as None if they do not support that platform.
+                              "OpenStack", "VSphere", "oVirt", "IBMCloud", "KubeVirt", "EquinixMetal",
+                              "PowerVS", "AlibabaCloud", "Nutanix", "External", and "None". Individual
+                              components may not support all platforms, and must handle unrecognized
+                              platforms as None if they do not support that platform.
                             enum:
                             - ""
                             - AWS
@@ -1279,6 +1284,10 @@ spec:
                                 minItems: 0
                                 type: array
                                 x-kubernetes-list-type: atomic
+                                x-kubernetes-validations:
+                                - message: vcenters must have at least 1 item
+                                  rule: 'size(self) != size(oldSelf) ? size(self)
+                                    > 0 : true'
                             type: object
                             x-kubernetes-validations:
                             - message: apiServerInternalIPs list is required once
@@ -1287,6 +1296,16 @@ spec:
                             - message: ingressIPs list is required once set
                               rule: '!has(oldSelf.ingressIPs) || has(self.ingressIPs)'
                         type: object
+                        x-kubernetes-validations:
+                        - message: vcenters is required once set and must have at
+                            least 1 item
+                          rule: 'has(oldSelf.vsphere) && has(oldSelf.vsphere.vcenters)
+                            ? (has(self.vsphere) && has(self.vsphere.vcenters) &&
+                            size(self.vsphere.vcenters) > 0) : true'
+                        - message: vcenters must have at least 1 item when initially
+                            configured
+                          rule: '!has(oldSelf.vsphere) && has(self.vsphere) && has(self.vsphere.vcenters)
+                            ? size(self.vsphere.vcenters) > 0 : true'
                     type: object
                   status:
                     description: status holds observed values from the cluster. They
@@ -1314,6 +1333,8 @@ spec:
                           and the operators should not configure the operand for highly-available operation
                           The 'External' mode indicates that the control plane is hosted externally to the cluster and that
                           its components are not visible within the cluster.
+                          The 'HighlyAvailableArbiter' mode indicates that the control plane will consist of 2 control-plane nodes
+                          that run conventional services and 1 smaller sized arbiter node that runs a bare minimum of services to maintain quorum.
                         type: string
                       cpuPartitioning:
                         default: None
@@ -2013,7 +2034,7 @@ spec:
                                   serviceEndpoints is a list of custom endpoints which will override the default
                                   service endpoints of an IBM service. These endpoints are used by components
                                   within the cluster when trying to reach the IBM Cloud Services that have been
-                                  overriden. The CCCMO reads in the IBMCloudPlatformSpec and validates each
+                                  overridden. The CCCMO reads in the IBMCloudPlatformSpec and validates each
                                   endpoint is resolvable. Once validated, the cloud config and IBMCloudPlatformStatus
                                   are updated to reflect the same custom endpoints.
                                 items:
